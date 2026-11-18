@@ -1,28 +1,196 @@
+:root {
+  --cw: clamp(72px, 20vw, 110px); /* card width */
+  --ch: calc(var(--cw) * 1.4);    /* card height */
+}
+
+* { box-sizing: border-box; }
+
+body { margin: 0; background: #151515; color: #eee; font-family: system-ui, sans-serif; }
 
 .app {
   min-height: 100vh;
   width: 100%;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
+  gap: 28px;
+  padding: 16px 12px 32px;
   background: #151515;
-}
-
-.card {
-  width: 100px;
-  height: 200px;
-  padding: 30px;
-  border-radius: 16px;
-  background: #252525;
-  color: white;
-  cursor: grab;
+  -webkit-user-select: none;
   user-select: none;
 }
 
-.card:active {
-  cursor: grabbing;
+/* ---------------- Order Zone (top) ---------------- */
+
+.zone-wrap { width: min(100%, 900px); }
+
+.title { margin: 0 0 8px; font-size: 1rem; font-weight: 600; color: #aaa; }
+
+.zone {
+  position: relative;
+  min-height: calc(var(--ch) + 40px);
+  padding: 20px 14px;
+  border: 2px dashed #444;
+  border-radius: 12px;
+  background: #222;
+  overflow-x: auto;
+  overflow-y: hidden;
+  transition: border-color 0.15s, background 0.15s;
+}
+.zone-over { border-color: #e24b4b; background: #2b2020; }
+
+.zone-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  color: #666;
+  pointer-events: none;
 }
 
-.card h2 {
-  margin-bottom: 10px;
+.zone-row { display: flex; gap: 10px; width: max-content; min-width: 100%; }
+
+.slot {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--cw);
+  height: var(--ch);
+  cursor: pointer;
+  transition: width 0.25s ease;
+  touch-action: pan-y;
+}
+.slot-rested { width: var(--ch); }
+.slot-selected { z-index: 3; }
+.slot-selected .card { outline: 2px solid #e24b4b; }
+
+/* action icons shown on the selected card */
+.actions {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.55);
+}
+.actions button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  color: #151515;
+  cursor: pointer;
+}
+.actions button:first-child { background: #e24b4b; color: #fff; }
+.actions button:hover { transform: scale(1.1); }
+.actions button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+/* ---------------- Cards ---------------- */
+
+.card {
+  width: var(--cw);
+  height: var(--ch);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #000;
+  flex: none;
+}
+
+.face { width: 100%; height: 100%; }
+.face img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+
+.placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+  padding: 4px;
+}
+.face-p4 .placeholder { background: linear-gradient(160deg, #1d4a7a, #0b1c33); }
+.face-p5 .placeholder { background: linear-gradient(160deg, #c8102e, #3a0710); }
+.placeholder .numeral { font-size: calc(var(--cw) * 0.32); font-weight: 700; }
+.placeholder .label { font-size: calc(var(--cw) * 0.13); }
+
+/* ---------------- Carousel (bottom) ---------------- */
+
+.tray-wrap { width: min(100%, 900px); }
+
+.tray-head { display: flex; gap: 8px; margin-bottom: 12px; }
+
+.search {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #444;
+  border-radius: 8px;
+  background: #222;
+  color: #eee;
+  font-size: 1rem;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.search:focus-visible { outline: 2px solid #e24b4b; }
+
+.nav {
+  width: 42px;
+  border: 1px solid #444;
+  border-radius: 8px;
+  background: #222;
+  color: #eee;
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+
+.tray {
+  display: flex;
+  gap: 12px;
+  padding: 14px 4px 10px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  border-radius: 12px;
+  background: #1c1c1c;
+}
+
+.tray-card {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: var(--cw);
+  scroll-snap-align: start;
+  cursor: grab;
+  touch-action: pan-x; /* horizontal swipe scrolls, vertical swipe drags the card */
+}
+.tray-card:active { cursor: grabbing; }
+
+.tray-name { font-size: 0.75rem; color: #bbb; text-align: center; }
+.tray-name b { color: #fff; }
+.tray-empty { margin: 8px; color: #777; }
+
+/* ---------------- Drag ghost ---------------- */
+
+.ghost {
+  position: fixed;
+  z-index: 100;
+  pointer-events: none;
+  translate: -50% -50%;
+  filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.6));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slot { transition: none; }
 }
