@@ -1,3 +1,5 @@
+/* App.tsx overrides --cw / --ch inline (so the stack layout math matches).
+   These clamp values are the fallback used before that runs. */
 :root {
   --cw: clamp(72px, 20vw, 110px); /* card width */
   --ch: calc(var(--cw) * 1.4);    /* card height */
@@ -24,17 +26,27 @@ body { margin: 0; background: #151515; color: #eee; font-family: system-ui, sans
 
 .zone-wrap { width: min(100%, 900px); }
 
-.title { margin: 0 0 8px; font-size: 1rem; font-weight: 600; color: #aaa; }
+.zone-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  min-height: 1.5em;
+}
+
+.title { margin: 0; font-size: 1rem; font-weight: 600; color: #aaa; }
+.total { margin-left: 8px; color: #fff; font-weight: 700; }
+
+.notice { margin: 0; font-size: 0.85rem; color: #f0b44c; text-align: right; }
 
 .zone {
   position: relative;
-  min-height: calc(var(--ch) + 40px);
-  padding: 20px 14px;
+  padding: 16px 14px;
   border: 2px dashed #444;
   border-radius: 12px;
   background: #222;
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow: visible; /* lets the action menu float above the zone edge */
   transition: border-color 0.15s, background 0.15s;
 }
 .zone-over { border-color: #e24b4b; background: #2b2020; }
@@ -49,34 +61,59 @@ body { margin: 0; background: #151515; color: #eee; font-family: system-ui, sans
   pointer-events: none;
 }
 
-.zone-row { display: flex; gap: 10px; width: max-content; min-width: 100%; }
+/* all cards are absolutely positioned inside the stack */
+.stack { position: relative; }
 
-.slot {
-  position: relative;
-  flex: none;
+.hand-card {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: var(--ch);
   display: grid;
   place-items: center;
-  width: var(--cw);
-  height: var(--ch);
   cursor: pointer;
-  transition: width 0.25s ease;
-  touch-action: pan-y;
+  outline: none;
 }
-.slot-rested { width: var(--ch); }
-.slot-selected { z-index: 3; }
-.slot-selected .card { outline: 2px solid #e24b4b; }
+.hand-card .card { box-shadow: -3px 0 8px rgba(0, 0, 0, 0.5); }
+.hand-card:focus-visible .card { outline: 2px solid #fff; }
+.is-selected .card { outline: 2px solid #e24b4b; box-shadow: 0 8px 18px rgba(0, 0, 0, 0.6); }
 
-/* action icons shown on the selected card */
+/* corner index: keeps the arcana readable on the visible slice of overlapped cards */
+.index {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  translate: 0 -50%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 6px;
+  border-radius: 8px 0 0 8px;
+  color: #fff;
+  font-weight: 700;
+  line-height: 1;
+  overflow: hidden;
+  pointer-events: none;
+  border-right: 1px solid rgba(255, 255, 255, 0.35);
+}
+.index span {
+  writing-mode: vertical-rl;
+  white-space: nowrap;
+}
+.index-p4 { background: linear-gradient(90deg, rgba(10, 30, 60, 0.9), rgba(10, 30, 60, 0.55)); }
+.index-p5 { background: linear-gradient(90deg, rgba(60, 5, 15, 0.9), rgba(60, 5, 15, 0.55)); }
+
+/* action menu floating above the selected card */
 .actions {
   position: absolute;
-  inset: 0;
+  top: -50px; /* floats over the zone edge, takes no layout space */
+  z-index: 1000;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
   gap: 6px;
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.55);
+  padding: 4px 6px;
+  border-radius: 999px;
+  background: #333;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 .actions button {
   display: grid;
@@ -92,6 +129,22 @@ body { margin: 0; background: #151515; color: #eee; font-family: system-ui, sans
 .actions button:first-child { background: #e24b4b; color: #fff; }
 .actions button:hover { transform: scale(1.1); }
 .actions button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+/* ---------------- Counter ---------------- */
+
+.counter { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; min-height: 28px; }
+.counter-empty { font-size: 0.85rem; color: #777; }
+
+.chip {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  font-size: 0.8rem;
+  color: #ccc;
+}
+.chip b { color: #fff; }
+.chip-max { border-color: #e24b4b; color: #ffb3b3; }
 
 /* ---------------- Cards ---------------- */
 
@@ -176,6 +229,23 @@ body { margin: 0; background: #151515; color: #eee; font-family: system-ui, sans
   touch-action: pan-x; /* horizontal swipe scrolls, vertical swipe drags the card */
 }
 .tray-card:active { cursor: grabbing; }
+.tray-maxed { cursor: not-allowed; }
+.tray-maxed .card { opacity: 0.4; filter: grayscale(0.8); }
+
+.thumb { position: relative; }
+
+.count {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+.count-max { background: #e24b4b; }
 
 .tray-name { font-size: 0.75rem; color: #bbb; text-align: center; }
 .tray-name b { color: #fff; }
@@ -192,5 +262,42 @@ body { margin: 0; background: #151515; color: #eee; font-family: system-ui, sans
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .slot { transition: none; }
+  .actions button:hover { transform: none; }
 }
+
+/* ---------------- Carousel: tap-to-pick menu ---------------- */
+
+.tray-picked .card { outline: 2px solid #e24b4b; }
+
+/* the menu covers the name row of the picked card, so it takes no extra space */
+.tray-card { position: relative; }
+.tray-actions {
+  position: absolute;
+  left: -4px;
+  right: -4px;
+  bottom: -6px;
+  height: 27px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1c1c1c; /* same as .tray, hides the name underneath */
+  border-radius: 0 0 8px 8px;
+}
+.tray-actions:empty { display: none; }
+.tray-actions-row { display: flex; gap: 6px; }
+.tray-actions svg { width: 16px; height: 16px; }
+
+.tray-actions button {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  color: #151515;
+  cursor: pointer;
+}
+.tray-actions button.btn-add { background: #3fae6a; color: #fff; }
+.tray-actions button:hover { transform: scale(1.1); }
+.tray-actions button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
